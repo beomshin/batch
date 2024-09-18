@@ -7,19 +7,34 @@ spring:
     active: local
   application:
     name: batch
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-  datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:file:./db/H2/data;AUTO_SERVER=true
-    username: sa
-    password:
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
   batch:
     jdbc:
-      initialize-schema: always
-  main:
-    allow-bean-definition-overriding: true
+      initialize-schema: ALWAYS
+    job:
+      enabled: true
+  domain-datasource:
+    pool-name: 'domain'
+    driver-class-name: com.mysql.jdbc.Driver
+    jdbc-url: jdbc:mysql://192.168.0.3/lawgg?useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+    username: lawgg
+    password: lawgg12!@
+    auto-commit: false
+    connection-timeout: 5000
+    validation-timeout: 3000
+    maximum-pool-size: 10
+    minimum-idle: 2
+    idle-timeout: 600000
+    max-lifetime: 1800000
+  batch-datasource:
+    pool-name: 'batch'
+    driver-class-name: com.mysql.jdbc.Driver
+    jdbc-url: jdbc:mysql://192.168.0.3/batch?useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+    username: batch
+    password: batch12!@
+    auto-commit: false
+    connection-timeout: 5000
+    validation-timeout: 3000
+    maximum-pool-size: 10
+    minimum-idle: 2
+    idle-timeout: 600000
+    max-lifetime: 1800000
