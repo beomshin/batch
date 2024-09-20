@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Date;
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -21,6 +20,8 @@ public class JobController {
     private final BoardRepository boardRepository;
     private final JobLauncher jobLauncher;
     private final Job myJob;
+    private final Job domainJobb;
+
 
     @GetMapping("/boards")
     public String hello() {
@@ -32,6 +33,14 @@ public class JobController {
     public void runJob() throws Exception {
         log.info("Job started");
         jobLauncher.run(myJob, new JobParametersBuilder()
+                .addDate("startTime", new Date())  // 고유한 파라미터
+                .toJobParameters());
+    }
+
+    @GetMapping("/job/run2")
+    public void runJob2() throws Exception {
+        log.info("Job2 started");
+        jobLauncher.run(domainJobb, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }

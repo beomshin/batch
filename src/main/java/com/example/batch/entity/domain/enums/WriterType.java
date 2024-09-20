@@ -7,8 +7,7 @@ import lombok.Getter;
 @Getter
 public enum WriterType {
     ANONYMOUS_TYPE(0),
-    MEMBER_TYPE(1),
-    LAW_FIRM_TYPE(2)
+    MEMBER_TYPE(1)
     ;
 
     int code;

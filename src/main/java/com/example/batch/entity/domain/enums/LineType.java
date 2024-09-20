@@ -15,6 +15,6 @@ public enum LineType {
     ALL(5)
     ;
 
-    int type;
+    int code;
 
 }

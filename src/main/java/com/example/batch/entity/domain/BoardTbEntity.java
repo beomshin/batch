@@ -11,8 +11,10 @@ import com.example.batch.entity.domain.enums.WriterType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.annotations.DynamicInsert;
 
 import java.sql.Timestamp;
 
@@ -21,6 +23,8 @@ import java.sql.Timestamp;
 @Table(name = "BoardTb")
 @ToString(callSuper = true)
 @Getter
+@Setter
+@DynamicInsert
 public class BoardTbEntity extends BaseEntity {
 
     @Id

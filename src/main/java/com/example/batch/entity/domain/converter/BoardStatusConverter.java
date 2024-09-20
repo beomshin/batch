@@ -11,6 +11,7 @@ public class BoardStatusConverter implements AttributeConverter<BoardStatus, Int
 
     @Override
     public Integer convertToDatabaseColumn(BoardStatus status) {
+        if (status == null) return null;
         return status.getCode();
     }
 

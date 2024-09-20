@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 @Configuration
 public class DomainDataSourceConfig {
 
-    @Bean
+    @Bean("dataSource")
     @ConfigurationProperties(prefix = "spring.domain-datasource")
     public DataSource dataSource() {
         return DataSourceBuilder.create()
@@ -29,7 +29,7 @@ public class DomainDataSourceConfig {
         return builder
                 .dataSource(dataSource)
                 .packages("com.example.batch.entity.domain")
-                .persistenceUnit("domain")
+                .persistenceUnit("domainPersistenceUnit")
                 .build();
     }
 
