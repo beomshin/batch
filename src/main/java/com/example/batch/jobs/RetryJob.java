@@ -98,7 +98,7 @@ public class RetryJob {
             newBoard.setReport(board.getReport());
             newBoard.setRecommendCount(board.getRecommendCount());
             if (board.getContentEmbedded().getIp().startsWith("1.111.111.111")) {
-                log.info("강제 SQLException 발생");
+                log.info("강제 SQLException 발생 후 RETRY");
                 throw new SQLException();
             }
             return newBoard;
