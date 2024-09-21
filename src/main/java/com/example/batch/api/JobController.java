@@ -21,6 +21,7 @@ public class JobController {
     private final JobLauncher jobLauncher;
     private final Job myJob;
     private final Job domainJobb;
+    private final Job retryJobb;
 
 
     @GetMapping("/boards")
@@ -41,6 +42,14 @@ public class JobController {
     public void runJob2() throws Exception {
         log.info("Job2 started");
         jobLauncher.run(domainJobb, new JobParametersBuilder()
+                .addDate("startTime", new Date())  // 고유한 파라미터
+                .toJobParameters());
+    }
+
+    @GetMapping("/job/run3")
+    public void runJob3() throws Exception {
+        log.info("retry 테스트 JOB 실행");
+        jobLauncher.run(retryJobb, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
