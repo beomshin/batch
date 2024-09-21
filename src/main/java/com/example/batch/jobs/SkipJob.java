@@ -26,7 +26,7 @@ import java.sql.SQLException;
 
 @Slf4j
 @Configuration
-public class RetryJob {
+public class SkipJob {
 
     private final JobExecutionListener jobExecutionListener;
 
@@ -36,7 +36,7 @@ public class RetryJob {
 
     private final PlatformTransactionManager transactionManager;
 
-    public RetryJob(
+    public SkipJob(
             @Qualifier("entityManagerFactory") EntityManagerFactory entityManagerFactory,
             @Qualifier("loggingStepListener")StepExecutionListener stepExecutionListener,
             @Qualifier("loggingJobListener") JobExecutionListener jobExecutionListener,
@@ -49,32 +49,33 @@ public class RetryJob {
     }
 
     @Bean
-    public Job retryJobb(JobRepository jobRepository) {
-        return new JobBuilder("retryJobb", jobRepository)
+    public Job skipJobb(JobRepository jobRepository) {
+        return new JobBuilder("skipJobb", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .listener(jobExecutionListener)
-                .start(retryStep(jobRepository))
+                .start(skipStep(jobRepository))
                 .build();
     }
 
     @Bean
     @JobScope
-    public Step retryStep(JobRepository jobRepository) {
-        return new StepBuilder("retryStep", jobRepository)
+    public Step skipStep(JobRepository jobRepository) {
+        return new StepBuilder("skipStep", jobRepository)
                 .listener(stepExecutionListener)
                 .<BoardTbEntity, BoardTbEntity>chunk(10, transactionManager)
-                .reader(retryJpaPagingItemReader())
-                .processor(retryProcessor())
-                .writer(retryWriter())
-                .faultTolerant()
-                .retry(SQLException.class)
-                .retryLimit(3)
+                .reader(skipJpaPagingItemReader())
+                .processor(skipProcessor())
+                .writer(skipWriter())
+                .faultTolerant() //  내결함성 기능 활성화
+                .skipLimit(3) //  skip 허용 횟수, 해당 횟수 초과 시 Error 발생, Skip 사용시 필수 선언
+                .skip(SQLException.class) //  SQLException 에 대해서는 skip
+                .noSkip(NullPointerException.class) //  NullPointerException 에 대해서는 skip 하지 않음
                 .build();
     }
 
     @Bean
     @StepScope
-    public JpaPagingItemReader<BoardTbEntity> retryJpaPagingItemReader() {
+    public JpaPagingItemReader<BoardTbEntity> skipJpaPagingItemReader() {
         log.info("JpaPagingItemReader start");
         JpaPagingItemReader<BoardTbEntity> pagingItemReader = new JpaPagingItemReader<>();
         pagingItemReader.setQueryString("SELECT b FROM BoardTb b where DATE_FORMAT(regDt, '%y%m%d') != DATE_FORMAT(now(), '%y%m%d') and postType NOT IN (99, 98)");
@@ -85,7 +86,7 @@ public class RetryJob {
 
     @Bean
     @StepScope
-    public ItemProcessor<BoardTbEntity, BoardTbEntity> retryProcessor() {
+    public ItemProcessor<BoardTbEntity, BoardTbEntity> skipProcessor() {
         return board -> {
             BoardTbEntity newBoard = new BoardTbEntity();
             newBoard.setCommentCount(board.getCommentCount());
@@ -97,7 +98,7 @@ public class RetryJob {
             newBoard.setContentEmbedded(board.getContentEmbedded());
             newBoard.setReport(board.getReport());
             newBoard.setRecommendCount(board.getRecommendCount());
-            if (board.getContentEmbedded().getIp().startsWith("1.111.111.111")) {
+            if (board.getContentEmbedded().getIp() != null && board.getContentEmbedded().getIp().startsWith("1.111.111.111")) {
                 log.info("강제 SQLException 발생");
                 throw new SQLException();
             }
@@ -108,8 +109,8 @@ public class RetryJob {
 
     @Bean
     @StepScope
-    public ItemWriter<BoardTbEntity> retryWriter() {
-        log.info("retryWriter start");
+    public ItemWriter<BoardTbEntity> skipWriter() {
+        log.info("skipWriter start");
         JpaItemWriter<BoardTbEntity> jpaItemWriter = new JpaItemWriter<>();
         jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
         jpaItemWriter.setClearPersistenceContext(true);

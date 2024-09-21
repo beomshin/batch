@@ -22,7 +22,7 @@ public class JobController {
     private final Job myJob;
     private final Job domainJobb;
     private final Job retryJobb;
-
+    private final Job skipJobb;
 
     @GetMapping("/boards")
     public String hello() {
@@ -53,4 +53,13 @@ public class JobController {
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
+
+    @GetMapping("/job/run4")
+    public void runJob4() throws Exception {
+        log.info("skip 테스트 JOB 실행");
+        jobLauncher.run(skipJobb, new JobParametersBuilder()
+                .addDate("startTime", new Date())  // 고유한 파라미터
+                .toJobParameters());
+    }
+
 }
