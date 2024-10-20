@@ -1,6 +1,5 @@
 package com.example.batch.api;
 
-import com.example.batch.entity.domain.BoardTbEntity;
 import com.example.batch.repository.BoardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +27,6 @@ public class JobController {
     public String hello() {
         return boardRepository.findAll().toString();
     }
-
 
     @GetMapping("/job/run")
     public void runJob() throws Exception {
