@@ -17,11 +17,21 @@ public class AsyncJobController {
 
     private final JobLauncher jobLauncher;
     private final Job asyncJob;
+    private final Job multiThreadStepJob;
 
     @GetMapping("/async/job/run")
     public void runJob() throws Exception {
         log.info("병렬수항테스트(AsyncItemprocessor) 시작");
         jobLauncher.run(asyncJob, new JobParametersBuilder()
+                .addDate("startTime", new Date())  // 고유한 파라미터
+                .toJobParameters());
+    }
+
+
+    @GetMapping("/async/job2/run")
+    public void runJo2() throws Exception {
+        log.info("병렬수항테스트(MultiThreadStepTestJob) 시작");
+        jobLauncher.run(multiThreadStepJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
