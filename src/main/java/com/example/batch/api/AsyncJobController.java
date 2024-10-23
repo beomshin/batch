@@ -20,6 +20,7 @@ public class AsyncJobController {
     private final Job asyncJob;
     private final Job multiThreadStepJob;
     private final Job parallelStepJob;
+    private final Job partitioningJob;
 
     @GetMapping("/async/job/run")
     public void runJob() throws Exception {
@@ -42,6 +43,14 @@ public class AsyncJobController {
     public void runJo3() throws Exception {
         log.info("병렬수항테스트(parallelStepJob) 시작");
         jobLauncher.run(parallelStepJob, new JobParametersBuilder()
+                .addDate("startTime", new Date())  // 고유한 파라미터
+                .toJobParameters());
+    }
+
+    @GetMapping("/async/job4/run")
+    public void runJo4() throws Exception {
+        log.info("병렬수항테스트(partitioningJob) 시작");
+        jobLauncher.run(partitioningJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
