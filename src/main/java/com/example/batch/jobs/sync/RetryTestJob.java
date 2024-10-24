@@ -1,4 +1,4 @@
-package com.example.batch.jobs;
+package com.example.batch.jobs.sync;
 
 import com.example.batch.entity.domain.BoardTbEntity;
 import jakarta.persistence.EntityManagerFactory;
@@ -26,17 +26,15 @@ import java.sql.SQLException;
 
 @Slf4j
 @Configuration
-public class RetryJob {
+public class RetryTestJob {
 
     private final JobExecutionListener jobExecutionListener;
-
     private final StepExecutionListener stepExecutionListener;
-
     private final EntityManagerFactory entityManagerFactory;
-
     private final PlatformTransactionManager transactionManager;
+    private final int CHUNK_SIZE = 10;
 
-    public RetryJob(
+    public RetryTestJob(
             @Qualifier("entityManagerFactory") EntityManagerFactory entityManagerFactory,
             @Qualifier("loggingStepListener")StepExecutionListener stepExecutionListener,
             @Qualifier("loggingJobListener") JobExecutionListener jobExecutionListener,
@@ -49,9 +47,9 @@ public class RetryJob {
     }
 
     @Bean
-    public Job retryJobb(JobRepository jobRepository) {
-        return new JobBuilder("retryJobb", jobRepository)
-                .incrementer(new RunIdIncrementer())
+    public Job retryJob(JobRepository jobRepository) {
+        return new JobBuilder("retryJob", jobRepository)
+                .incrementer(new RunIdIncrementer()) // run.id 증가 설정
                 .listener(jobExecutionListener)
                 .start(retryStep(jobRepository))
                 .build();
@@ -62,13 +60,13 @@ public class RetryJob {
     public Step retryStep(JobRepository jobRepository) {
         return new StepBuilder("retryStep", jobRepository)
                 .listener(stepExecutionListener)
-                .<BoardTbEntity, BoardTbEntity>chunk(10, transactionManager)
+                .<BoardTbEntity, BoardTbEntity>chunk(CHUNK_SIZE, transactionManager)
                 .reader(retryJpaPagingItemReader())
                 .processor(retryProcessor())
                 .writer(retryWriter())
-                .faultTolerant()
-                .retry(SQLException.class)
-                .retryLimit(3)
+                .faultTolerant() //  내결함성 기능 활성화
+                .retry(SQLException.class) // 발생 예상 exception
+                .retryLimit(3) // 3회 최대 retry 초과시 job 실패
                 .build();
     }
 
@@ -79,7 +77,7 @@ public class RetryJob {
         JpaPagingItemReader<BoardTbEntity> pagingItemReader = new JpaPagingItemReader<>();
         pagingItemReader.setQueryString("SELECT b FROM BoardTb b where DATE_FORMAT(regDt, '%y%m%d') != DATE_FORMAT(now(), '%y%m%d') and postType NOT IN (99, 98)");
         pagingItemReader.setEntityManagerFactory(entityManagerFactory);
-        pagingItemReader.setPageSize(10);
+        pagingItemReader.setPageSize(CHUNK_SIZE); // 청크 사이즈 == 페이징 사이즈 맞추는것이 잠재적 오류 예방
         return pagingItemReader;
     }
 
@@ -109,7 +107,6 @@ public class RetryJob {
     @Bean
     @StepScope
     public ItemWriter<BoardTbEntity> retryWriter() {
-        log.info("retryWriter start");
         JpaItemWriter<BoardTbEntity> jpaItemWriter = new JpaItemWriter<>();
         jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
         jpaItemWriter.setClearPersistenceContext(true);

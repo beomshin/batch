@@ -1,6 +1,5 @@
 package com.example.batch.api;
 
-import com.example.batch.repository.BoardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -16,46 +15,40 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class JobController {
 
-    private final BoardRepository boardRepository;
     private final JobLauncher jobLauncher;
-    private final Job myJob;
-    private final Job domainJobb;
-    private final Job retryJobb;
-    private final Job skipJobb;
+    private final Job defaultJob;
+    private final Job jpaJob;
+    private final Job retryJob;
+    private final Job skipJob;
 
-    @GetMapping("/boards")
-    public String hello() {
-        return boardRepository.findAll().toString();
-    }
-
-    @GetMapping("/job/run")
-    public void runJob() throws Exception {
-        log.info("Job started");
-        jobLauncher.run(myJob, new JobParametersBuilder()
+    @GetMapping("/default/job")
+    public void defaultJob() throws Exception {
+        log.info("배치수행테스트(DefaultJob) 시작");
+        jobLauncher.run(defaultJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
 
-    @GetMapping("/job/run2")
-    public void runJob2() throws Exception {
-        log.info("Job2 started");
-        jobLauncher.run(domainJobb, new JobParametersBuilder()
+    @GetMapping("/jpa/job")
+    public void jpaJob() throws Exception {
+        log.info("배치수행테스트(JpaJob) 시작");
+        jobLauncher.run(jpaJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
 
-    @GetMapping("/job/run3")
-    public void runJob3() throws Exception {
-        log.info("retry 테스트 JOB 실행");
-        jobLauncher.run(retryJobb, new JobParametersBuilder()
+    @GetMapping("/retry/job")
+    public void retryJob() throws Exception {
+        log.info("배치수행테스트(retryJob) 시작");
+        jobLauncher.run(retryJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
 
-    @GetMapping("/job/run4")
+    @GetMapping("/skip/job")
     public void runJob4() throws Exception {
-        log.info("skip 테스트 JOB 실행");
-        jobLauncher.run(skipJobb, new JobParametersBuilder()
+        log.info("배치수행테스트(skipJob) 시작");
+        jobLauncher.run(skipJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }

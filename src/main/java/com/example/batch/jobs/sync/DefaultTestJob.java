@@ -1,4 +1,4 @@
-package com.example.batch.jobs;
+package com.example.batch.jobs.sync;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,26 +26,26 @@ import java.util.Arrays;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class MyJobConfig {
+public class DefaultTestJob {
 
-    private final JobExecutionListener jobExecutionListener;
-
-    private final StepExecutionListener stepExecutionListener;
+    private final JobExecutionListener jobExecutionListener; // 리스너
+    private final StepExecutionListener stepExecutionListener; // 리스너
+    private final int CHUNK_SIZE = 2;
 
     @Bean
-    public Job myJob(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
-        return new JobBuilder("myJob", jobRepository)
-                .incrementer(new RunIdIncrementer())
+    public Job defaultJob(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
+        return new JobBuilder("defaultJob", jobRepository)
+                .incrementer(new RunIdIncrementer()) // run.id 증가 설정
                 .listener(jobExecutionListener)
-                .start(myTaskletStep(jobRepository, batchTransactionManager))
-                .next(myChunkStep(jobRepository, batchTransactionManager))
+                .start(defaultTasklet(jobRepository, batchTransactionManager))
+                .next(defaultStep(jobRepository, batchTransactionManager))
                 .build();
     }
 
     @Bean
     @JobScope
-    public Step myTaskletStep(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
-        return new StepBuilder("myTaskletStep", jobRepository)
+    public Step defaultTasklet(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
+        return new StepBuilder("defaultTasklet", jobRepository)
                 .listener(stepExecutionListener)
                 .tasklet(((contribution, chunkContext) -> {
                     log.info("myTaskletStep started");
@@ -55,10 +55,10 @@ public class MyJobConfig {
 
     @Bean
     @JobScope
-    public Step myChunkStep(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
-        return new StepBuilder("myChunkStep", jobRepository)
+    public Step defaultStep(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
+        return new StepBuilder("defaultStep", jobRepository)
                 .listener(stepExecutionListener)
-                .<String, String >chunk(2, batchTransactionManager)
+                .<String, String >chunk(CHUNK_SIZE, batchTransactionManager)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())

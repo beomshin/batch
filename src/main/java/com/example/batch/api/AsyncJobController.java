@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.Step;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,34 +21,34 @@ public class AsyncJobController {
     private final Job parallelStepJob;
     private final Job partitioningJob;
 
-    @GetMapping("/async/job/run")
-    public void runJob() throws Exception {
-        log.info("병렬수항테스트(AsyncItemprocessor) 시작");
+    @GetMapping("/async-item-processor")
+    public void asyncItemProcessor() throws Exception {
+        log.info("병렬수행테스트(AsyncItemprocessor) 시작");
         jobLauncher.run(asyncJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
 
 
-    @GetMapping("/async/job2/run")
-    public void runJo2() throws Exception {
-        log.info("병렬수항테스트(MultiThreadStepTestJob) 시작");
+    @GetMapping("/multi-thread")
+    public void multiThread() throws Exception {
+        log.info("병렬수행테스트(MultiThreadStepTestJob) 시작");
         jobLauncher.run(multiThreadStepJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
 
-    @GetMapping("/async/job3/run")
-    public void runJo3() throws Exception {
-        log.info("병렬수항테스트(parallelStepJob) 시작");
+    @GetMapping("/parallel-step")
+    public void parallelStep() throws Exception {
+        log.info("병렬수행테스트(parallelStepJob) 시작");
         jobLauncher.run(parallelStepJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());
     }
 
-    @GetMapping("/async/job4/run")
-    public void runJo4() throws Exception {
-        log.info("병렬수항테스트(partitioningJob) 시작");
+    @GetMapping("/partitioning")
+    public void partitioning() throws Exception {
+        log.info("병렬수행테스트(partitioningJob) 시작");
         jobLauncher.run(partitioningJob, new JobParametersBuilder()
                 .addDate("startTime", new Date())  // 고유한 파라미터
                 .toJobParameters());

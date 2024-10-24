@@ -1,4 +1,4 @@
-package com.example.batch.jobs;
+package com.example.batch.jobs.sync;
 
 import com.example.batch.entity.domain.BoardTbEntity;
 import jakarta.persistence.EntityManagerFactory;
@@ -26,17 +26,15 @@ import java.sql.SQLException;
 
 @Slf4j
 @Configuration
-public class SkipJob {
+public class SkipTestJob {
 
     private final JobExecutionListener jobExecutionListener;
-
     private final StepExecutionListener stepExecutionListener;
-
     private final EntityManagerFactory entityManagerFactory;
-
     private final PlatformTransactionManager transactionManager;
+    private final int CHUNK_SIZE = 10;
 
-    public SkipJob(
+    public SkipTestJob(
             @Qualifier("entityManagerFactory") EntityManagerFactory entityManagerFactory,
             @Qualifier("loggingStepListener")StepExecutionListener stepExecutionListener,
             @Qualifier("loggingJobListener") JobExecutionListener jobExecutionListener,
@@ -49,9 +47,9 @@ public class SkipJob {
     }
 
     @Bean
-    public Job skipJobb(JobRepository jobRepository) {
-        return new JobBuilder("skipJobb", jobRepository)
-                .incrementer(new RunIdIncrementer())
+    public Job skipJob(JobRepository jobRepository) {
+        return new JobBuilder("skipJob", jobRepository)
+                .incrementer(new RunIdIncrementer()) // run.id 증가 설정
                 .listener(jobExecutionListener)
                 .start(skipStep(jobRepository))
                 .build();
@@ -62,7 +60,7 @@ public class SkipJob {
     public Step skipStep(JobRepository jobRepository) {
         return new StepBuilder("skipStep", jobRepository)
                 .listener(stepExecutionListener)
-                .<BoardTbEntity, BoardTbEntity>chunk(10, transactionManager)
+                .<BoardTbEntity, BoardTbEntity>chunk(CHUNK_SIZE, transactionManager)
                 .reader(skipJpaPagingItemReader())
                 .processor(skipProcessor())
                 .writer(skipWriter())
@@ -80,7 +78,7 @@ public class SkipJob {
         JpaPagingItemReader<BoardTbEntity> pagingItemReader = new JpaPagingItemReader<>();
         pagingItemReader.setQueryString("SELECT b FROM BoardTb b where DATE_FORMAT(regDt, '%y%m%d') != DATE_FORMAT(now(), '%y%m%d') and postType NOT IN (99, 98)");
         pagingItemReader.setEntityManagerFactory(entityManagerFactory);
-        pagingItemReader.setPageSize(10);
+        pagingItemReader.setPageSize(CHUNK_SIZE); // 청크 사이즈 == 페이징 사이즈 맞추는것이 잠재적 오류 예방
         return pagingItemReader;
     }
 
@@ -110,7 +108,6 @@ public class SkipJob {
     @Bean
     @StepScope
     public ItemWriter<BoardTbEntity> skipWriter() {
-        log.info("skipWriter start");
         JpaItemWriter<BoardTbEntity> jpaItemWriter = new JpaItemWriter<>();
         jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
         jpaItemWriter.setClearPersistenceContext(true);

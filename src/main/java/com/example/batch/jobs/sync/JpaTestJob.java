@@ -1,4 +1,4 @@
-package com.example.batch.jobs;
+package com.example.batch.jobs.sync;
 
 import com.example.batch.entity.domain.BoardTbEntity;
 import jakarta.persistence.EntityManagerFactory;
@@ -24,17 +24,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Slf4j
 @Configuration
-public class DomainJob {
+public class JpaTestJob {
 
     private final JobExecutionListener jobExecutionListener;
-
     private final StepExecutionListener stepExecutionListener;
-
     private final EntityManagerFactory entityManagerFactory;
-
     private final PlatformTransactionManager transactionManager;
+    private final int CHUNK_SIZE = 10;
 
-    public DomainJob(
+    public JpaTestJob(
             @Qualifier("entityManagerFactory") EntityManagerFactory entityManagerFactory,
             @Qualifier("loggingStepListener")StepExecutionListener stepExecutionListener,
             @Qualifier("loggingJobListener") JobExecutionListener jobExecutionListener,
@@ -47,40 +45,39 @@ public class DomainJob {
     }
 
     @Bean
-    public Job domainJobb(JobRepository jobRepository) {
-        return new JobBuilder("domainJob", jobRepository)
-                .incrementer(new RunIdIncrementer())
+    public Job jpaJob(JobRepository jobRepository) {
+        return new JobBuilder("jpaJob", jobRepository)
+                .incrementer(new RunIdIncrementer()) // run.id 증가 설정
                 .listener(jobExecutionListener)
-                .start(domainStep(jobRepository))
+                .start(jpaStep(jobRepository))
                 .build();
     }
 
     @Bean
     @JobScope
-    public Step domainStep(JobRepository jobRepository) {
-        return new StepBuilder("domainStep", jobRepository)
+    public Step jpaStep(JobRepository jobRepository) {
+        return new StepBuilder("jpaStep", jobRepository)
                 .listener(stepExecutionListener)
-                .<BoardTbEntity, BoardTbEntity>chunk(10, transactionManager)
+                .<BoardTbEntity, BoardTbEntity>chunk(CHUNK_SIZE, transactionManager)
                 .reader(jpaPagingItemReader())
-                .processor(domainProcessor())
-                .writer(domainWriter())
+                .processor(jpaProcessor())
+                .writer(jpaWriter())
                 .build();
     }
 
     @Bean
     @StepScope
     public JpaPagingItemReader<BoardTbEntity> jpaPagingItemReader() {
-        log.info("JpaPagingItemReader start");
         JpaPagingItemReader<BoardTbEntity> pagingItemReader = new JpaPagingItemReader<>();
         pagingItemReader.setQueryString("SELECT b FROM BoardTb b where DATE_FORMAT(regDt, '%y%m%d') != DATE_FORMAT(now(), '%y%m%d') and postType not in (99, 98)");
         pagingItemReader.setEntityManagerFactory(entityManagerFactory);
-        pagingItemReader.setPageSize(10);
+        pagingItemReader.setPageSize(CHUNK_SIZE); // 청크 사이즈 == 페이징 사이즈 맞추는것이 잠재적 오류 예방
         return pagingItemReader;
     }
 
     @Bean
     @StepScope
-    public ItemProcessor<BoardTbEntity, BoardTbEntity> domainProcessor() {
+    public ItemProcessor<BoardTbEntity, BoardTbEntity> jpaProcessor() {
         return board -> {
             BoardTbEntity newBoard = new BoardTbEntity();
             newBoard.setCommentCount(board.getCommentCount());
@@ -99,8 +96,7 @@ public class DomainJob {
 
     @Bean
     @StepScope
-    public ItemWriter<BoardTbEntity> domainWriter() {
-        log.info("domainWriter start");
+    public ItemWriter<BoardTbEntity> jpaWriter() {
         JpaItemWriter<BoardTbEntity> jpaItemWriter = new JpaItemWriter<>();
         jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
         jpaItemWriter.setClearPersistenceContext(true);

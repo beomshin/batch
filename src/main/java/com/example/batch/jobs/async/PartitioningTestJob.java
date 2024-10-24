@@ -1,14 +1,19 @@
-package com.example.batch.jobs;
+package com.example.batch.jobs.async;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.partition.support.Partitioner;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.ListItemReader;
@@ -23,50 +28,66 @@ import java.util.Map;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class PartitioningTestJob {
+
+    private final JobExecutionListener jobExecutionListener;
+    private final StepExecutionListener stepExecutionListener;
+    private final int CHUNK_SIZE = 3;
 
     @Bean
     public Job partitioningJob(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
         return new JobBuilder("partitioningJob", jobRepository)
-                .incrementer(new RunIdIncrementer())
+                .incrementer(new RunIdIncrementer()) // run.id 증가 설정
+                .listener(jobExecutionListener)
                 .start(partitioningStep(jobRepository, batchTransactionManager))
                 .build();
     }
 
     @Bean
+    @JobScope
     public ThreadPoolTaskExecutor partitioningTaskExecutor() { // 스레드수 설정
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(4);
-        executor.setCorePoolSize(8);
+        executor.setCorePoolSize(12);
         return executor;
     }
 
     @Bean
+    @JobScope
     public Step partitioningStep(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
         return new StepBuilder("partitioningStep", jobRepository)
-                .partitioner(partitioningSubStep(jobRepository, batchTransactionManager).getName(), new ColumnRangePartitioner()) // 1
+                .partitioner(partitioningSubStep(jobRepository, batchTransactionManager).getName(), new ColumnRangePartitioner()) // 파티션 이름, 클라이언트 정의 파티션 등록
                 .step(partitioningSubStep(jobRepository, batchTransactionManager)) // 스텝
-                .gridSize(12) // 파티션 개수
+                .listener(stepExecutionListener)
+                .gridSize(12) // 파티션 개수 ( 스레드 개수와 맞추는것이 좋음)
                 .taskExecutor(partitioningTaskExecutor()) // 스레드 생성
                 .build();
     }
 
+    // 파티션 step bean 등록시 중복 실행되는 버그로 빈등록 하지 않음
 
-
-    @Bean
     public Step partitioningSubStep(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
         return new StepBuilder("partitioningSubStep", jobRepository)
-                .<String, String>chunk(3, batchTransactionManager)
-                .reader(itemReader())
-                .writer(itemWriter())
+                .<String, String>chunk(CHUNK_SIZE, batchTransactionManager) // 최대 읽을 수 있는 아이템 개수 설정
+                .listener(stepExecutionListener)
+                .reader(partitioningItemReader())
+                .processor(partStringItemProcessor())
+                .writer(partitioningItemWriter())
                 .build();
     }
 
-    public ItemReader<String> itemReader() {
+
+    public ItemReader<String> partitioningItemReader() {
         return new ListItemReader<>(Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
     }
 
-    public ItemWriter<String> itemWriter() {
+
+    public ItemProcessor<String, String> partStringItemProcessor() {
+        return String::toUpperCase;
+    }
+
+    public ItemWriter<String> partitioningItemWriter() {
         return item -> {
             log.info("Writing item {}", item.getItems());
         };

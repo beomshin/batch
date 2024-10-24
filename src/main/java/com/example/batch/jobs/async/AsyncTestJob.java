@@ -1,9 +1,13 @@
-package com.example.batch.jobs;
+package com.example.batch.jobs.async;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.configuration.annotation.JobScope;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
@@ -22,12 +26,18 @@ import java.util.concurrent.Future;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class AsyncTestJob {
+
+    private final JobExecutionListener jobExecutionListener;
+    private final StepExecutionListener stepExecutionListener;
+    private final int CHUNK_SIZE = 2;
 
     @Bean
     public Job asyncJob(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
         return new JobBuilder("asyncJob", jobRepository)
-                .incrementer(new RunIdIncrementer())
+                .incrementer(new RunIdIncrementer()) // run.id 증가 설정
+                .listener(jobExecutionListener)
                 .start(asyncProcessorStep(jobRepository, batchTransactionManager))
                 .build();
     }
@@ -36,14 +46,16 @@ public class AsyncTestJob {
     @JobScope
     public Step asyncProcessorStep(JobRepository jobRepository, PlatformTransactionManager batchTransactionManager) {
         return new StepBuilder("asyncProcessorStep", jobRepository)
-                .<String, Future<String>>chunk(2, batchTransactionManager)
-                .reader(itemReader())
+                .<String, Future<String>>chunk(CHUNK_SIZE, batchTransactionManager)
+                .listener(stepExecutionListener)
+                .reader(asyItemReader())
                 .processor(asyncProcessor())
                 .writer(asyncItemWriter())
                 .build();
     }
 
     @Bean
+    @StepScope
     public ThreadPoolTaskExecutor asyncTaskExecutor() { // 스레드수 설정
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(4);
@@ -52,12 +64,13 @@ public class AsyncTestJob {
     }
 
     @Bean
-    public ItemReader<String> itemReader() { // item reader 병렬수행하지 않음
+    @StepScope
+    public ItemReader<String> asyItemReader() { // item reader 병렬수행하지 않음
         return new ListItemReader<>(Arrays.asList("item1", "item2", "item3", "item4", "item5", "item6"));
     }
 
     @Bean
-    public AsyncItemProcessor<String, String> asyncProcessor() {
+    @StepScope    public AsyncItemProcessor<String, String> asyncProcessor() {
         AsyncItemProcessor<String, String> processor = new AsyncItemProcessor<>();
         processor.setTaskExecutor(asyncTaskExecutor());
         processor.setDelegate((item -> { // processor 병렬 수행 위임
@@ -70,6 +83,7 @@ public class AsyncTestJob {
 
 
     @Bean
+    @StepScope
     public AsyncItemWriter<String> asyncItemWriter() {
         AsyncItemWriter<String> writer = new AsyncItemWriter<>();
         writer.setDelegate((item) -> { // writer 병렬 수행 위임

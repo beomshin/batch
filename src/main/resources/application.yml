@@ -5,6 +5,14 @@ server:
 spring:
   profiles:
     active: local
+    group:
+      local:
+        - console-logging
+      test:
+        - console-logging
+      prod:
+        - console-logging
+        - file-logging
   application:
     name: batch
   batch:
